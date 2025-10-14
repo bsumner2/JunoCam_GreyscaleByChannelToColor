@@ -1,0 +1,8 @@
+CompileFlags:
+  Add: [ -xc, -std=c23, -Wall, -Wextra, -I../include,
+         -I/usr/include/SDL2, -D_GNU_SOURCE=1, -D_REENTRANT,
+         -I/usr/include/libpng16, -DHWY_SHARED_DEFINE, -DAVIF_DLL,
+         -I/usr/include/rav1e, -I/usr/include/svt-av1, -DEB_DLL,
+         -I/usr/include/webp
+        ]
+  Compiler: clang
