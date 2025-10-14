@@ -65,7 +65,7 @@ int main(int argc, char *argv[]) {
     SDL_Quit();
     return -1;
   }
-  if (!(win = SDL_CreateWindow("Tilemap", SDL_WINDOWPOS_CENTERED, 
+  if (!(win = SDL_CreateWindow("JunoCam Image Processor", SDL_WINDOWPOS_CENTERED, 
           SDL_WINDOWPOS_CENTERED, W, H, SDL_WINDOW_SHOWN))) {
     PERRF("SDL couldn't open window. Details: %s\n",
         SDL_GetError());
