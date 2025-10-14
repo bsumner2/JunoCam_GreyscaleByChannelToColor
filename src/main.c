@@ -32,7 +32,7 @@ int main(int argc, char *argv[]) {
   };
   SDL_Window *win;
   SDL_Renderer *ren;
-  if (0>SDL_Init(SDL_INIT_VIDEO|SDL_INIT_EVENTS)) {
+  if (0>SDL_Init(SDL_INIT_EVERYTHING^SDL_INIT_AUDIO)) {
     PERRF("Failed to initialize SDL.\n\x1b[1;34mDetails:\n\x1b[0m%s\n",
         SDL_GetError());
     return -1;
@@ -57,19 +57,33 @@ int main(int argc, char *argv[]) {
     SDL_Quit();
     return -1;
   }
-  if (0>SDL_CreateWindowAndRenderer(out_img.width,
-                                    out_img.height,
-                                    SDL_WINDOW_SHOWN,
-                                    &win,
-                                    &ren)) {
-    PERRF("Failed to open window/renderer. \x1b[1;34mDetails:\x1b[0m\n%s\n",
+
+  const int H=out_img.height, W=out_img.width;
+  if (H<=0 || W<=0) {
+    printf("Invalid window dims %dx%d", W, H);
+    free(out_img.buf);
+    SDL_Quit();
+    return -1;
+  }
+  if (!(win = SDL_CreateWindow("Tilemap", SDL_WINDOWPOS_CENTERED, 
+          SDL_WINDOWPOS_CENTERED, W, H, SDL_WINDOW_SHOWN))) {
+    PERRF("SDL couldn't open window. Details: %s\n",
         SDL_GetError());
     free(out_img.buf);
     SDL_Quit();
     return -1;
   }
+
+
+  if (!(ren = SDL_CreateRenderer(win, -1, SDL_RENDERER_SOFTWARE))) {
+    PERRF("SDL couldn't open renderer. Details: %s\n",
+        SDL_GetError());
+    free(out_img.buf);
+    SDL_DestroyWindow(win);
+    SDL_Quit();
+    return -1;
+  }
   RawImage_Pixel_t curpixel;
-  const int H=out_img.height, W=out_img.width;
   for (int x,y=0; H>y;++y) {
     for (x=0; W>x; ++x) {
       curpixel = out_img.buf[y*W+x];
