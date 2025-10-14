@@ -4,6 +4,7 @@
 #ifndef _IMAGE_PROC_
 #define _IMAGE_PROC_
 
+#include <SDL_render.h>
 #include <stdint.h>
 #ifdef __cplusplus
 extern "C" {
@@ -26,12 +27,20 @@ typedef enum {
   RED=0,GREEN,BLUE,ALPHA
 } RawImage_Channel_Idx_t;
 
-bool PNG_IncorporateImageAsChannel(RawImage_t *img_out, 
-                                   const char *__restrict png_file_path,
-                                   RawImage_Channel_Idx_t channel);
+typedef enum e_supported_fmt {
+  BMP, PNG, JPG, SUPPORTED_FMT_COUNT
+} SupportedFmt_e;
+
+bool Image_IncorporateImageAsChannel(RawImage_t *img_out, 
+                                   const char *__restrict file_path,
+                                   RawImage_Channel_Idx_t channel,
+                                   SupportedFmt_e in_file_fmt);
 
 
-
+bool Image_Save(const char *__restrict file_path,
+                SupportedFmt_e format,
+                const RawImage_t *img_data,
+                SDL_Renderer *ren);
 
 
 #ifdef __cplusplus

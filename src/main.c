@@ -7,22 +7,68 @@
 #include "image_proc.h"
 #include <SDL.h>
 #include <assert.h>
+#define MIN_EXT_LEN 4
+#define MAX_EXT_LEN 5
+typedef enum e_supported_fmt_spellings {
+  BMP_LOWER=0, BMP_UPPER, PNG_LOWER, PNG_UPPER, JPG_LOWER, JPG_UPPER, JPEG_LOWER,
+  JPEG_UPPER, SUPPORTED_FMT_SPELLING_COUNT
+} SupportedFmtSpelling_e;
+
+
+
+static const char *SUPPORTED_FMT_SPELLINGS[SUPPORTED_FMT_SPELLING_COUNT] = {
+  ".bmp", ".BMP", ".png", ".PNG", ".jpg", ".JPG", ".jpeg", ".JPEG"
+};
+
+static void PrintUsage(const char *__restrict argv0) {
+  fprintf(stderr, "\x1b[1;34mUsage:\x1b[0m\n"
+      "\t\x1b[1;36m%s \x1b[31m<red channel grayscale img path> "
+      "\x1b[32m<green channel grayscale img path> "
+      "\x1b[34m<blue channel grayscale img path> "
+      "\x1b[39m<output image path>\x1b[22m\n"
+      "Supported file formats: \x1b[1;35mBMP\x1b[0m, "
+      "\x1b[1;35mJPG\x1b[0m, "
+      "\x1b[1;35mPNG\x1b[0m.\n", 
+      argv0);
+}
+
 int main(int argc, char *argv[]) {
+  SupportedFmt_e formats[4]={
+    SUPPORTED_FMT_COUNT,SUPPORTED_FMT_COUNT,
+    SUPPORTED_FMT_COUNT,SUPPORTED_FMT_COUNT
+  };
+  
   if (5 != argc) {
-    PERRF("Invalid arg count. \x1b[1;34mUsage:\x1b[0m\n"
-        "\t\x1b[1;36m%s \x1b[31m<red channel grayscale img path> "
-        "\x1b[32m<green channel grayscale img path> "
-        "\x1b[34m<blue channel grayscale img path> "
-        "\x1b[39m<output image folder and basename*>\x1b[22m\n"
-        "\t\t*: Omit file extension!!!!! Program will decide output format.\n"
-        "\t\t(in reality, I just want to do bitmap, and don't wanna have to "
-        "validate whether\n\t\tor not output path given has extension \x1b[1m.bmp\x1b[0m)\n"
-        "\t\tJust use gimp or something if you don't like it.\n"
-        "\t\tI apologize for the inconvenience, it's just bitmaps are the least"
-        "pain in the a55 image format to deal with.\n\t\tMaybe it's even "
-        "better this way, tho, as bmp's aren't ever compressed lossily.\n", 
-        argv[0]);
+    PERR("Invalid arg count. See usage below.\n");
+    PrintUsage(argv[0]);
     return -1;
+  }
+  for (int valid, len, i = 1; 5>i; ++i) {
+    len = strlen(argv[i]);
+    valid = (bool)(MIN_EXT_LEN<len);
+    if (valid) {
+      valid = 0;
+      for (int fmt, extlen, j = 0; SUPPORTED_FMT_SPELLING_COUNT>j;++j) {
+        extlen = strlen(SUPPORTED_FMT_SPELLINGS[j]);
+        if (0!=strcmp(&argv[i][len-extlen], SUPPORTED_FMT_SPELLINGS[j]))
+          continue;
+        if (JPG_LOWER<=j) {
+          fmt = JPG;
+        } else {
+          fmt = j/2;
+        }
+        assert(BMP<=fmt && SUPPORTED_FMT_COUNT>fmt);
+        formats[i-1]=fmt;
+        valid = 1;
+        break;
+      }
+    }
+    if (!valid) {
+      PERRF("Invalid argv[\x1b[1m%d\x1b[0m]. \x1b[1;33m\"%s\"\x1b[0m is not "
+          "a valid file format. See usage below.\n", i, argv[i]);
+      PrintUsage(argv[0]);
+      return -1;
+    }
   }
   RawImage_t out_img = {
     .initialized=false,
@@ -37,27 +83,20 @@ int main(int argc, char *argv[]) {
         SDL_GetError());
     return -1;
   }
-  if (!PNG_IncorporateImageAsChannel(&out_img, argv[1], RED)) {
-    if (out_img.initialized) {
-      assert(NULL!=out_img.buf);
-      free(out_img.buf);
+
+  for (RawImage_Channel_Idx_t channel=RED; ALPHA>channel; ++channel) {
+    if (!Image_IncorporateImageAsChannel(&out_img, argv[1+channel], 
+                                         channel, formats[channel])) {
+      if (out_img.initialized) {
+        SDL_Quit();
+        assert(NULL!=out_img.buf);
+        free(out_img.buf);
+        return -1;
+      }
+      SDL_Quit();
       return -1;
     }
-    SDL_Quit();
-    return -1;
   }
-  if (!PNG_IncorporateImageAsChannel(&out_img, argv[2], GREEN)) {
-    free(out_img.buf);
-    SDL_Quit();
-    return -1;
-  }
-
-  if (!PNG_IncorporateImageAsChannel(&out_img, argv[3], BLUE)) {
-    free(out_img.buf);
-    SDL_Quit();
-    return -1;
-  }
-
   const int H=out_img.height, W=out_img.width;
   if (H<=0 || W<=0) {
     printf("Invalid window dims %dx%d", W, H);
@@ -92,6 +131,11 @@ int main(int argc, char *argv[]) {
     }
   }
   SDL_RenderPresent(ren);
+
+  Image_Save(argv[4], formats[3], &out_img, ren);
+  free(out_img.buf);
+
+  
   SDL_Event ev;
   for (bool run = true; run; ) {
     for (;SDL_PollEvent(&ev);) {
@@ -105,6 +149,4 @@ int main(int argc, char *argv[]) {
   SDL_DestroyWindow(win);
   SDL_Quit();
   return 0;
-
-
 }
